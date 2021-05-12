@@ -1,0 +1,17 @@
+image:
+  tag: 2.4
+
+proxy:
+  http:
+    enabled: false
+
+ingressController:
+  installCRDs: false
+  image:
+    tag: 1.2
+  ingressClass: super-kong
+
+replicaCount: 1
+
+env:
+  database: "off"

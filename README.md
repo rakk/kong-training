@@ -9,6 +9,9 @@ Start minikube
 minikube start
 ```
 
+If you see info that there is an issue with connection to gcr.io
+check how to setup [proxy for minikube](proxy).
+
 Create namespace:
 ```bash
 kubectl create ns super-kong
@@ -19,7 +22,7 @@ kubectl create ns super-kong
 Install example app:
 ```
 kubectl -n super-kong apply -f https://bit.ly/echo-service
-kubectl -n super-kong get pod
+kubectl -n super-kong get pod -w
 ```
 
 ## Installation KONG
@@ -34,7 +37,7 @@ Install kong:
 
 ```bash
 helm install super kong/kong -f values/kong.values.yaml --namespace super-kong
-kubectl -n super-kong get pod
+kubectl -n super-kong get pod -w
 ```
 
 Check out [values/kong.values.yaml](values/kong.values.yaml) for details.
@@ -50,7 +53,7 @@ Creating `demo` Ingress:
 ```bash
 echo "
 
-apiVersion: apps/v1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: demo
@@ -61,9 +64,12 @@ spec:
   - http:
       paths:
       - path: /foo
+        pathType: Prefix
         backend:
-          serviceName: echo
-          servicePort: 80
+          service:
+            name: echo
+            port:
+              number: 80
 " | kubectl -n super-kong apply -f -
 ```
 
@@ -74,7 +80,30 @@ curl -k $KONG_PROXY/foo/bar
 
 (expected) response:
 ```bash
-TODO: add reponse here!
+(...)
+Request Information:
+	client_address=172.17.0.2
+	method=GET
+	real path=/foo/bar
+	query=
+	request_version=1.1
+	request_scheme=http
+	request_uri=http://192.168.64.6:8080/foo/bar
+
+Request Headers:
+	accept=*/*  
+	connection=keep-alive  
+	host=192.168.64.6:32421  
+	user-agent=curl/7.64.1  
+	x-forwarded-for=172.17.0.1  
+	x-forwarded-host=192.168.64.6  
+	x-forwarded-path=/foo/bar  
+	x-forwarded-port=443  
+	x-forwarded-proto=https  
+	x-real-ip=172.17.0.1  
+
+Request Body:
+	-no body in request-
 ```
 
 Let's make a POST curl call:
@@ -84,5 +113,30 @@ curl -k -X POST $KONG_PROXY/foo/bar
 
 (expected) response:
 ```bash
-TODO: add reponse here!
+(...)
+Request Information:
+	client_address=172.17.0.2
+	method=POST
+	real path=/foo/bar
+	query=
+	request_version=1.1
+	request_scheme=http
+	request_uri=http://192.168.64.6:8080/foo/bar
+
+Request Headers:
+	accept=*/*  
+	connection=keep-alive  
+	host=192.168.64.6:32421  
+	user-agent=curl/7.64.1  
+	x-forwarded-for=172.17.0.1  
+	x-forwarded-host=192.168.64.6  
+	x-forwarded-path=/foo/bar  
+	x-forwarded-port=443  
+	x-forwarded-proto=https  
+	x-real-ip=172.17.0.1  
+
+Request Body:
+	-no body in request-
 ```
+
+Hurray! Our Kong is working! In next step we will extend our configuration.
