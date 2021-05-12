@@ -70,10 +70,11 @@ spec:
             name: echo
             port:
               number: 80
+
 " | kubectl -n super-kong apply -f -
 ```
 
-Let's make a curl call:
+Let's make a GET curl call:
 ```bash
 curl -k $KONG_PROXY/foo/bar
 ```
@@ -140,3 +141,67 @@ Request Body:
 ```
 
 Hurray! Our Kong is working! In next step we will extend our configuration.
+
+## Let's block POST request by using KongIngress
+
+Let's add KongIngress:
+```bash
+echo "
+
+apiVersion: configuration.konghq.com/v1
+kind: KongIngress
+metadata:
+  name: demo
+  annotations:
+    kubernetes.io/ingress.class: super-kong
+route:
+  methods:
+  - GET
+  strip_path: true
+
+" | kubectl -n super-kong apply -f -
+```
+
+The GET request is still working fine:
+```bash
+curl -k $KONG_PROXY/foo/bar
+```
+
+(expected) response:
+```bash
+(...)
+Request Information:
+	client_address=172.17.0.2
+	method=GET
+	real path=/foo/bar
+	query=
+	request_version=1.1
+	request_scheme=http
+	request_uri=http://192.168.64.6:8080/foo/bar
+
+Request Headers:
+	accept=*/*  
+	connection=keep-alive  
+	host=192.168.64.6:32421  
+	user-agent=curl/7.64.1  
+	x-forwarded-for=172.17.0.1  
+	x-forwarded-host=192.168.64.6  
+	x-forwarded-path=/foo/bar  
+	x-forwarded-port=443  
+	x-forwarded-proto=https  
+	x-real-ip=172.17.0.1  
+
+Request Body:
+	-no body in request-
+```
+
+But POST is not working anymore:
+
+```bash
+curl -k -X POST $KONG_PROXY/foo/bar
+```
+
+expected output:
+```bash
+{"message":"no Route matched with those values"}
+```
